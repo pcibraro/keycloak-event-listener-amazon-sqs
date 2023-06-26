@@ -55,27 +55,7 @@ public class SQSEventListenerProvider implements EventListenerProvider {
 
     @Override
     public void onEvent(Event event) {
-        // Ignore excluded events
-        if (excludedEvents != null && excludedEvents.contains(event.getType())) {
-            return;
-        } else {
-            String stringEvent = toString(event);
-            try {
-
-                SendMessageRequest message = new SendMessageRequest()
-                        .withQueueUrl(this.queueUrl)
-                        .withMessageBody(stringEvent)
-                        .withDelaySeconds(5);
-
-                sqs.sendMessage(message);
-
-            } catch(Exception e) {
-                // ?
-                System.out.println("Error while trying to push event to queue. " + e.toString());
-                e.printStackTrace();
-                return;
-            }
-        }
+       
     }
 
     @Override

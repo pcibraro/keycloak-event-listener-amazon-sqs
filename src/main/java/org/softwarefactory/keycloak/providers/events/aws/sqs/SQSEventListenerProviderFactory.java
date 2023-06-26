@@ -54,14 +54,7 @@ public class SQSEventListenerProviderFactory implements EventListenerProviderFac
 
     @Override
     public void init(Config.Scope config) {
-        String[] excludes = config.getArray("exclude-events");
-        if (excludes != null) {
-            excludedEvents = new HashSet<>();
-            for (String e : excludes) {
-                excludedEvents.add(EventType.valueOf(e));
-            }
-        }
-
+        
         String[] excludesOperations = config.getArray("excludesOperations");
         if (excludesOperations != null) {
             excludedAdminOperations = new HashSet<>();
@@ -69,7 +62,7 @@ public class SQSEventListenerProviderFactory implements EventListenerProviderFac
                 excludedAdminOperations.add(OperationType.valueOf(e));
             }
         }
-
+        
         queueUrl = config.get("queueUrl", null);
         secretKey = config.get("secretKey", null);
         accessKey = config.get("accessKey", null);
