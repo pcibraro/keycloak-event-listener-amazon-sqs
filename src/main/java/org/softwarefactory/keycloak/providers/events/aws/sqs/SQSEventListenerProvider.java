@@ -17,54 +17,43 @@
 
 package org.softwarefactory.keycloak.providers.events.aws.sqs;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import org.keycloak.events.Event;
 import org.keycloak.events.EventListenerProvider;
-import org.keycloak.events.EventType;
 import org.keycloak.events.admin.AdminEvent;
-import org.keycloak.events.admin.OperationType;
+import org.keycloak.events.admin.ResourceType;
+import org.keycloak.models.KeycloakSession;
 
-import java.util.Map;
-import java.util.Set;
 import java.lang.Exception;
 
-import java.io.IOException;
-
 public class SQSEventListenerProvider implements EventListenerProvider {
-    private Set<EventType> excludedEvents;
-    private Set<OperationType> excludedAdminOperations;
     private String queueUrl;
     public static final String publisherId = "keycloak";
 
     private final AmazonSQS sqs;
 
+    private KeycloakSession session;
 
-    public SQSEventListenerProvider(Set<EventType> excludedEvents, Set<OperationType> excludedAdminOperations, String queueUrl, AmazonSQS sqs) {
-        this.excludedEvents = excludedEvents;
-        this.excludedAdminOperations = excludedAdminOperations;
+    public SQSEventListenerProvider(String queueUrl, AmazonSQS sqs, KeycloakSession session) {
         this.queueUrl = queueUrl;
         this.sqs = sqs;
-
-
+        this.session = session;
     }
 
     @Override
     public void onEvent(Event event) {
-       
     }
 
     @Override
     public void onEvent(AdminEvent event, boolean includeRepresentation) {
-        // Ignore excluded operations
-        if (excludedAdminOperations != null && excludedAdminOperations.contains(event.getOperationType())) {
-            return;
-        } else {
+                    
+            if(!event.getResourceType().equals(ResourceType.USER) && !event.getResourceType().equals(ResourceType.REALM_ROLE_MAPPING)) {
+                return;
+            }
+
             String stringEvent = toString(event);
+           
             try {
                 SendMessageRequest message = new SendMessageRequest()
                         .withQueueUrl(this.queueUrl)
@@ -78,69 +67,31 @@ public class SQSEventListenerProvider implements EventListenerProvider {
                 e.printStackTrace();
                 return;
             }
-        }
     }
 
-
-    private String toString(Event event) {
+    private String toString(AdminEvent event) {
         StringBuilder sb = new StringBuilder();
 
-        sb.append("{'type': '");
-        sb.append(event.getType());
-        sb.append("', 'realmId': '");
-        sb.append(event.getRealmId());
-        sb.append("', 'clientId': '");
-        sb.append(event.getClientId());
-        sb.append("', 'userId': '");
-        sb.append(event.getUserId());
-        sb.append("', 'ipAddress': '");
-        sb.append(event.getIpAddress());
-        sb.append("'");
+        String resourcePath = event.getResourcePath();
 
-        if (event.getError() != null) {
-            sb.append(", 'error': '");
-            sb.append(event.getError());
-            sb.append("'");
+        sb.append("{'operation': '");
+        sb.append(event.getOperationType());
+        sb.append("', 'resourceType': '");
+        sb.append(event.getResourceType());
+        sb.append("', 'realm': '");
+        sb.append(this.session.getContext().getRealm().getName());
+        sb.append("', 'userId': '");
+        
+        if(resourcePath.indexOf("/", 6) > -1) {
+            sb.append(resourcePath.substring(6, 6 + resourcePath.substring(6).indexOf("/")));
         }
-        sb.append(", 'details': {");
-        if (event.getDetails() != null) {
-            for (Map.Entry<String, String> e : event.getDetails().entrySet()) {
-                sb.append("'");
-                sb.append(e.getKey());
-                sb.append("': '");
-                sb.append(e.getValue());
-                sb.append("', ");
-            }
-        }
+        else {
+            sb.append(resourcePath.substring(6));
+        } 
+
+        sb.append("'");
         sb.append("}}");
 
-        return sb.toString();
-    }
-    
-    
-    private String toString(AdminEvent adminEvent) {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("{'type': '");
-        sb.append(adminEvent.getOperationType());
-        sb.append("', 'realmId': '");
-        sb.append(adminEvent.getAuthDetails().getRealmId());
-        sb.append("', 'clientId': '");
-        sb.append(adminEvent.getAuthDetails().getClientId());
-        sb.append("', 'userId': '");
-        sb.append(adminEvent.getAuthDetails().getUserId());
-        sb.append("', 'ipAddress': '");
-        sb.append(adminEvent.getAuthDetails().getIpAddress());
-        sb.append("', 'resourcePath': '");
-        sb.append(adminEvent.getResourcePath());
-        sb.append("'");
-
-        if (adminEvent.getError() != null) {
-            sb.append(", 'error': '");
-            sb.append(adminEvent.getError());
-            sb.append("'");
-        }
-        sb.append("}");
         return sb.toString();
     }
 

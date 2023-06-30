@@ -35,8 +35,6 @@ import java.util.Set;
 
 public class SQSEventListenerProviderFactory implements EventListenerProviderFactory {
 
-    private Set<EventType> excludedEvents;
-    private Set<OperationType> excludedAdminOperations;
     private String queueUrl;
 
     private String accessKey;
@@ -49,19 +47,11 @@ public class SQSEventListenerProviderFactory implements EventListenerProviderFac
     @Override
     public EventListenerProvider create(KeycloakSession session) {
 
-        return new SQSEventListenerProvider(excludedEvents, excludedAdminOperations, queueUrl, this.sqs);
+        return new SQSEventListenerProvider(queueUrl, this.sqs, session);
     }
 
     @Override
     public void init(Config.Scope config) {
-        
-        String[] excludesOperations = config.getArray("excludesOperations");
-        if (excludesOperations != null) {
-            excludedAdminOperations = new HashSet<>();
-            for (String e : excludesOperations) {
-                excludedAdminOperations.add(OperationType.valueOf(e));
-            }
-        }
         
         queueUrl = config.get("queueUrl", null);
         secretKey = config.get("secretKey", null);
